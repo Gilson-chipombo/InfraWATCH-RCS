@@ -1,4 +1,4 @@
-# 🚀 InfraWatch
+# InfraWatch
 
 > Plataforma de monitoramento de infraestruturas corporativas orientada ao utilizador final.
 
@@ -53,5 +53,5 @@ O sistema será composto por:
 
 ---
 
-## 📁 Estrutura do Projeto (proposta)
+## 📁 Estrutura do Projeto
 
