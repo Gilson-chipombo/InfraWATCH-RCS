@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle Remoto</title>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tokenElement = document.getElementById('token');
+            const token = generateToken(16);
+            let socket;
+
+            // Função para gerar um token
+            function generateToken(digit) {
+                const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                let link = '';
+                for (let i = 0; i < digit; i++) {
+                    link += characters.charAt(Math.floor(Math.random() * characters.length));
+                }
+                return link;
+            }
+
+            tokenElement.textContent = token;
+
+            // Conectar ao servidor WS
+            socket = new WebSocket(`ws://${location.host}`);
+
+            socket.onopen = () => {
+                console.log('Conectado ao servidor WebSocket');
+                // Enviar token ao servidor para identificação
+                socket.send(JSON.stringify({
+                    token: token, // token gerado no cliente
+                    type: 'register'
+                }));
+            };
+
+            socket.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    console.log("Mensagem recebida:", msg);
+                    try {
+                        if (msg.event === `deviceaccept/${token}` && msg.data) {
+                            const prevItem = localStorage.getItem('device');
+                            const devices = prevItem ? JSON.parse(prevItem) : [];
+                            devices.push(msg.data);
+                            localStorage.setItem('device', JSON.stringify(devices));
+                            loadDevices();
+                        }
+                    } catch (error) {
+                        console.error("Erro ao processar mensagem WS:", error);
+                    }
+                } catch (err) {
+                    console.error("Erro ao processar mensagem:", err);
+                }
+            };
+
+
+            socket.onclose = () => {
+                console.log('Desconectado do servidor');
+            };
+
+            // Enviar o token ao servidor quando o formulário for enviado
+            document.querySelector('form').onsubmit = async function (e) {
+                e.preventDefault();
+                const adbToken = document.getElementById('adbToken').value;
+
+                try {
+                    const response = await fetch('/newConnect', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            token: adbToken,
+                            device: navigator.userAgent,
+                            tokenGenerated: token
+                        })
+                    });
+
+                    if (response.ok) {
+                        console.log('Pedido de conexão enviado');
+                    } else {
+                        console.error('Erro ao enviar o pedido de conexão:', response.statusText);
+                    }
+                } catch (error) {
+                    console.error('Erro ao enviar o pedido de conexão:', error);
+                }
+            };
+
+            // Função para carregar dispositivos do localStorage
+            function loadDevices() {
+                const deviceListElement = document.getElementById('device-list');
+                deviceListElement.innerHTML = '';
+
+                const devices = JSON.parse(localStorage.getItem('device')) || [];
+                devices.forEach(element => {
+                    const item = document.createElement('div');
+                    item.innerHTML = `
+                        <span>${element.user}</span>
+                        <span>${element.system}</span>
+                        <span>${element.platform}</span>
+                        <span>${element.version}</span>
+                        <span>${element.mytoken}</span>
+                    `;
+                    item.addEventListener('click', () => {
+                        sessionStorage.setItem('_selected_token', element.mytoken);
+                        sessionStorage.setItem('_selected_device', JSON.stringify(element, null, 2));
+                        window.location.href = '/shell';
+                    });
+                    deviceListElement.appendChild(item);
+                });
+            }
+
+            // Carregar dispositivos ao iniciar a página
+            loadDevices();
+        });
+    </script>
+</head>
+
+<body>
+    <h1>Controle Remoto</h1>
+
+    <div>
+        <form>
+            <span>Pedido de acesso</span>
+            <input type="text" id="adbToken" placeholder="Token de dispositivo" required>
+            <button type="submit">Conectar</button>
+            <span>Temp token: <b id="token"></b></span>
+        </form>
+    </div>
+
+    <div id="device-list">
+        <!-- Dispositivos serão carregados aqui -->
+    </div>
+</body>
+
+</html>
