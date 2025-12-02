@@ -1,5 +1,4 @@
 **/node_modules/
 **/.env
-/dashboad/.env
-/dashboad/.env.example
-/dashboad/.env_push.sh
+/dashboad/.env*
+
