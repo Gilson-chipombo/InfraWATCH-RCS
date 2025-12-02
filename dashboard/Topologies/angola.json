@@ -1,0 +1,29 @@
+{
+  "devices": [
+    {
+      "id": "dev_wscwbh1",
+      "type": "server",
+      "x": 160,
+      "y": 144,
+      "name": "Server 1",
+      "ip": "localhost",
+      "services": [
+        {
+          "value": "http",
+          "label": "HTTP"
+        },
+        {
+          "value": "ssh",
+          "label": "SSH"
+        }
+      ],
+      "connectionType": "Wi-Fi"
+    }
+  ],
+  "links": [],
+  "meta": {
+    "version": 1,
+    "createdAt": "2025-08-18T12:50:38.088Z",
+    "name": "angola"
+  }
+}

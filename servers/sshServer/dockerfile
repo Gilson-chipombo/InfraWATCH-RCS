@@ -1,0 +1,19 @@
+FROM node:22.16.0 AS builder
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+
+FROM node:22.16.0-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+USER root
+
+USER node
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/main.js ./main.js
+
+EXPOSE 3001
+CMD ["node", "main.js"]

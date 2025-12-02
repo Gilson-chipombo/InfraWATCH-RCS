@@ -1,0 +1,97 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Service {
+  id                 String               @id @default(uuid())
+  name               String
+  type               ServiceType
+  target             String
+  snmpCommunity      String?
+  snmpPort           Int?                 @default(161)
+  ownerId            String
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  glpiId             String?              @unique
+  AlertContact       AlertContact[]
+  Incident           Incident[]
+  NotificationPolicy NotificationPolicy[]
+  SliTarget          SliTarget[]
+
+  @@index([ownerId])
+  @@index([type])
+}
+
+model SliTarget {
+  id         String   @id @default(uuid())
+  serviceId  String
+  metric     String
+  threshold  Float
+  comparison String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId, metric])
+}
+
+model AlertContact {
+  id        String   @id @default(uuid())
+  channel   String
+  to        String
+  active    Boolean  @default(true)
+  level     Int      @default(1)
+  serviceId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId, active])
+  @@index([serviceId, level])
+}
+
+
+model Incident {
+  id                 String    @id @default(uuid())
+  serviceId          String
+  openedAt           DateTime  @default(now())
+  closedAt           DateTime?
+  reason             String?
+  retryCount         Int       @default(0)
+  lastNotificationAt DateTime?
+  glpiTicketId       String?
+  glpiTicketUrl      String?
+  service            Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  @@index([serviceId, openedAt])
+  @@index([serviceId, closedAt])
+}
+
+model NotificationPolicy {
+  id                    String   @id @default(uuid())
+  serviceId             String?
+  maxRetries            Int      @default(3)
+  retryIntervalMinutes  Int      @default(2)
+  escalateAfterMinutes  Int      @default(10)
+  cooldownMinutes       Int      @default(15)
+  recoveryConfirmations Int      @default(2)
+  channels              String[] @default([])
+  active                Boolean  @default(true)
+  isDefault             Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  service               Service? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId, active])
+}
+
+enum ServiceType {
+  HTTP
+  PING
+  SNMP
+}

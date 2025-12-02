@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  username      String?   @unique
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Service {
+  id            String          @id @default(cuid())
+  type          String
+  name          String
+  dbType        String?
+  dbUrl         String?
+  wsType        String?
+  wsUrl         String?
+  host          String?
+  user          String?
+  port          Int?
+  password      String?
+  containerName String?
+  image         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  key_sshId     String?
+  GithubWebhook GithubWebhook[]
+  Key_ssh       Key_ssh?        @relation(fields: [key_sshId], references: [id])
+}
+
+model Cluster {
+  id        String          @id @default(cuid())
+  name      String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  metrics   ClusterMetric[]
+}
+
+model ClusterMetric {
+  id          String    @id @default(cuid())
+  clusterId   String
+  title       String
+  description String
+  code        String
+  data        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  cluster     Cluster   @relation(fields: [clusterId], references: [id])
+  messages    Message[]
+}
+
+model Message {
+  id              String        @id @default(cuid())
+  user            String
+  message         String
+  response        String
+  status          String
+  clusterMetricId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  clusterMetric   ClusterMetric @relation(fields: [clusterMetricId], references: [id])
+}
+
+model Key_ssh {
+  id         String    @id @default(cuid())
+  name       String
+  privateKey String
+  publicKey  String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  Server     Server[]
+  Service    Service[]
+}
+
+model Server {
+  id        String   @id @default(cuid())
+  keyId     String
+  name      String
+  host      String
+  port      Int
+  username  String
+  password  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  key       Key_ssh  @relation(fields: [keyId], references: [id])
+}
+
+model GithubWebhook {
+  id           String   @id @default(cuid())
+  service      String
+  serviceId    String
+  repository   String
+  repoUrl      String
+  branch       String
+  commitId     String
+  commitMsg    String
+  commitUrl    String
+  pusherName   String
+  pusherUser   String
+  pusherAvatar String
+  createdAt    DateTime @default(now())
+  Service      Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+}

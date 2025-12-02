@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/xterm/5.5.0/xterm.css"
+        integrity="sha512-AbNrj/oSHJaILgcdnkYm+DQ08SqVbZ8jlkJbFyyS1WDcAaXAcAfxJnCH69el7oVgTwVwyA5u5T+RdFyUykrV3Q=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/5.5.0/xterm.js"
+        integrity="sha512-Gujw5GajF5is3nMoGv9X+tCMqePLL/60qvAv1LofUZTV9jK8ENbM9L+maGmOsNzuZaiuyc/fpph1KT9uR5w3CQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        function generateToken(digit) {
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let link = '';
+            for (let i = 0; i < digit; i++) {
+                link += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            return link;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = sessionStorage.getItem('_selected_token');
+            const device = JSON.parse(sessionStorage.getItem('_selected_device')) || [];
+            const myself = generateToken(16);
+
+            console.log(device)
+
+            // Criar terminal
+            var term = new Terminal();
+            term.open(document.getElementById('terminal'));
+            term.write(`\x1B[1;3;32m> ${(device.user).slice(7, 100)}\x1B[0m $ `);
+
+            // Conectar ao servidor WebSocket
+            const socket = new WebSocket(`ws://${location.host}`);
+
+            socket.addEventListener('open', () => {
+                console.log('Conectado ao servidor WS');
+
+                // Envia identificação para registrar no servidor
+                socket.send(JSON.stringify({
+                    type: 'register',
+                    token: myself
+                }));
+            });
+
+            socket.addEventListener('message', (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    console.log("Mensagem recebida:", msg);
+
+                    if (msg.event === `info/${myself}`) {
+                        console.log(msg.data.message);
+                    }
+
+                    if (msg.event === `response/${myself}`) {
+                        term.write('\r\n' + msg.data.stdout + '\r');
+                        term.write(`\x1B[1;3;32m> ${(device.user).slice(7, 100)}\x1B[0m $ `);
+                    }
+                } catch (err) {
+                    console.error("Erro ao processar mensagem:", err);
+                }
+            });
+
+            let command = '';
+
+            term.onKey(async e => {
+                const char = e.key;
+                if (char === '\r') { // Enter
+                    term.write('\r\n');
+
+                    if (command.trim() === 'cls' || command.trim() === 'clear') {
+                        term.clear();
+                    } else if (command.trim() === 'help') {
+                        term.write('\r\nAvailable commands:\r\n');
+                        term.write(' - cls, clear: Clear the terminal\r\n');
+                        term.write(' - help: Show this help message\r\n');
+                        term.write(' - init: Initialize something\r\n');
+                        term.write(' - info: Show information\r\n\n');
+                    } else if (command.trim() === 'show') {
+                        term.write('\r\nDevice Token:\r\n');
+                        term.write(` Local  -> localhost\t\t\t${myself}\r\n`);
+                        term.write(` Remote -> ${device.user}\t\t\t${token}\r\n\n`);
+                    } else if (command.trim() === 'device') {
+                        term.write('\r\nDevice Info:\r\n\n');
+                        term.write(` TOKEN\t\t\t${device.mytoken}\r\n`);
+                        term.write(` PLATFORM\t\t${device.platform}\r\n`);
+                        term.write(` SYSTEM\t\t\t${device.system}\r\n`);
+                        term.write(` USER\t\t\t${device.user}\r\n`);
+                        term.write(` SYSTEM\t\t\t${device.version}\r\n\n`);
+                    } else if (command.trim() === 'shutdown') {
+                        await fetch('/signal', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ token, myself, command })
+                        });
+                    } else {
+                        await fetch('/command', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ token, myself, command })
+                        });
+                    }
+
+                    command = '';
+                    term.write(`\x1B[1;3;32m> ${(device.user).slice(7, 100)}\x1B[0m $ `);
+
+                } else if (char === '\u007F') { // Backspace
+                    if (command.length > 0) {
+                        command = command.slice(0, -1);
+                        term.write('\b \b');
+                    }
+                } else {
+                    command += char;
+                    term.write(char);
+                }
+            });
+        });
+    </script>
+
+</head>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    html,
+    body {
+        height: 100%;
+        width: 100%;
+    }
+
+    #terminal {
+        width: 100%;
+        height: 100%;
+    }
+</style>
+
+<body>
+    <div id="terminal"></div>
+</body>
+
+</html>

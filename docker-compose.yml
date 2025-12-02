@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+  dashboard:
+    container_name: dashboard
+    build: ./dashboard
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - ./dashboard/.env
+
+  ssh_server:
+    container_name: sshServer
+    build: ./servers/sshServer
+    network_mode: host
+    restart: unless-stopped
+
+  linker_server:
+    container_name: linkerServer
+    build: ./servers/linkerServer
+    network_mode: host
+    restart: unless-stopped
+
+  monitoring_server:
+    container_name: monitoringServer
+    build: ./servers/monitoringServer
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - ./servers/monitoringServer/.env
+
+  webterm_server:
+    container_name: webtermServer
+    build: ./servers/webtermServer
+    network_mode: host
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    cap_add:
+      - SYS_RESOURCE
+
+  browserless:
+    image: browserless/chrome:latest
+    container_name: browserless
+    ports:
+      - "3008:3000"   # Porta da API do Browserless
+    environment:
+      - MAX_CONCURRENT_SESSIONS=5
+      - PREBOOT_CHROME=true
+      - CHROME_ARGS=--no-sandbox,--disable-setuid-sandbox
+
