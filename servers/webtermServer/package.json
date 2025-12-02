@@ -1,0 +1,22 @@
+{
+  "name": "webterm",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "bin": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "pkg . --targets node18-linux-x64 --output dist/webterm-linux",
+    "windows": "pkg . --targets node18-win-x64 --output dist/webterm-win.exe",
+    "mac": "pkg . --targets node18-macos-x64 --output dist/webterm-mac"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-pty": "^1.0.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.0"
+  }
+}
